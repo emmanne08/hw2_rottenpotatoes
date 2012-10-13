@@ -7,10 +7,6 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @all_ratings = Hash.new
-    Movie.all_ratings.each {|x| @all_ratings[x.to_sym] = true}
-    @title_href, @release_date_href = {:sort => 'title'}, {:sort => 'release_date'}
-    
     @movies = case params[:sort]
               when 'title'
                 @title_hilite = 'hilite'
@@ -22,22 +18,22 @@ class MoviesController < ApplicationController
                 Movie
               end
 
-
+    @all_ratings, temp_hash = Movie.all_ratings, {:commit => 'Refresh'}
     @movies = if params[:commit] == 'Refresh'
                 if params[:ratings]
-                  checked_ratings = params[:ratings].keys.map {|x| x.to_sym}
-                  (@all_ratings.keys - checked_ratings).each {|x| @all_ratings[x] = false}
-                  temp_hash = {:commit => 'Refresh'}
-                  checked_ratings.each {|x| temp_hash["ratings[#{x}]".to_sym] = 1}
+                  @checked_ratings = params[:ratings].keys
+                  @checked_ratings.each {|x| temp_hash["ratings[#{x}]".to_sym] = 1}
+                  @title_href, @release_date_href = {:sort => 'title'}, {:sort => 'release_date'}
                   @title_href.merge! temp_hash
                   @release_date_href.merge! temp_hash
-                  @movies.find_all_by_rating(checked_ratings)
+                  @movies.find_all_by_rating(@checked_ratings)
                 else
-                  @all_ratings.each {|key,value| @all_ratings[key] = false}
+                  @checked_ratings = []
                   []
                 end
-              else
-                @movies.all
+              else # case where /movies is the requested URI
+                @all_ratings.each {|x| temp_hash["ratings[#{x}]".to_sym] = 1}
+                redirect_to movies_path(temp_hash)
               end
   end
 
